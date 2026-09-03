@@ -1,0 +1,13 @@
+.state-card { min-height: 160px; display: flex; align-items: center; justify-content: center; gap: 1rem; padding: 2rem; border: 1px dashed #bdd7e3; border-radius: var(--radius-lg); color: var(--ink-600); background: #fbfdfe; text-align: left; }
+.state-card > svg { flex: 0 0 auto; color: var(--blue-600); }
+.state-card strong { display: block; margin-bottom: .25rem; color: var(--ink-900); font-family: var(--font-display); font-size: 1.1rem; }
+.state-card p { margin: 0; line-height: 1.55; }
+.state-error { border-color: #f2c6d7; background: #fff9fb; }
+.state-error > svg { color: var(--pink-500); }
+.spin { animation: spin 900ms linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.faq-list { display: grid; gap: .75rem; }
+.faq-item { border: 1px solid var(--border); border-radius: 16px; background: white; }
+.faq-item summary { padding: 1rem 1.15rem; cursor: pointer; color: var(--ink-900); font-weight: 800; }
+.faq-item p { margin: 0; padding: 0 1.15rem 1.15rem; color: var(--ink-600); line-height: 1.7; }
