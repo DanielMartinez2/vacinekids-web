@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import logo from '../../assets/brand/smart-kids-logo.png'
+import logo from '../../assets/branding/vacinekids-mark.svg'
 
 export function Footer() {
   return (

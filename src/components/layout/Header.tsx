@@ -1,7 +1,7 @@
 import { Menu, ShoppingBag, X } from 'lucide-react'
 import { useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
-import logo from '../../assets/brand/smart-kids-logo.png'
+import logo from '../../assets/branding/vacinekids-logo.svg'
 import { useCart } from '../../contexts/CartContext'
 import './layout.css'
 
@@ -18,8 +18,7 @@ export function Header() {
     <header className="site-header">
       <div className="container header-inner">
         <Link className="brand-link" to="/" aria-label="VacineKids — página inicial">
-          <img src={logo} alt="Smart Kids" />
-          <span>VacineKids</span>
+          <img src={logo} alt="" aria-hidden="true" />
         </Link>
 
         <button

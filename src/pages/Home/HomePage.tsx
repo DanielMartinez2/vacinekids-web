@@ -1,6 +1,6 @@
 import { ArrowRight, HeartPulse, PackageCheck, ShieldCheck } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import logo from '../../assets/brand/smart-kids-logo.png'
+import logo from '../../assets/branding/vacinekids-logo.svg'
 import './home.css'
 
 const features = [
@@ -23,12 +23,12 @@ export function HomePage() {
               <button className="button button-secondary" type="button" onClick={() => document.getElementById('como-funciona')?.scrollIntoView({ behavior: 'smooth' })}>Como funciona</button>
             </div>
           </div>
-          <div className="hero-visual" aria-label="Identidade visual Smart Kids">
+          <div className="hero-visual">
             <span className="visual-orbit visual-orbit-one" aria-hidden="true" />
             <span className="visual-orbit visual-orbit-two" aria-hidden="true" />
             <div className="logo-card">
               <span>Cuidado que acompanha cada fase</span>
-              <img src={logo} alt="Smart Kids" />
+              <img src={logo} alt="VacineKids" />
               <strong>Informar. Escolher. Cuidar.</strong>
             </div>
           </div>

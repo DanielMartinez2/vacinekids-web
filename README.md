@@ -132,6 +132,15 @@ O workflow é apenas uma preparação e não publica nada por conta própria at�
 
 A primeira versão usava AWS Amplify Gen 1, Cognito, AppSync/GraphQL, DynamoDB, S3 e Lambda, além de uma integração antiga com Mercado Pago. Esta reconstrução de portfólio remove o acoplamento funcional à AWS e separa frontend e backend em aplicações independentes. Nenhuma configuração, endpoint ou segredo do legado foi transportado.
 
+## Identidade visual
+
+A marca pública é **VacineKids**. A logo original combina um V aberto de proteção e acolhimento com um ponto que representa a pessoa cuidada, usando o azul e o verde já presentes na interface.
+
+- `src/assets/branding/vacinekids-logo.svg`: símbolo e nome em curvas vetoriais, usados no Header e na Home;
+- `src/assets/branding/vacinekids-mark.svg`: símbolo isolado, usado no Footer e como favicon.
+
+Os SVGs têm fundo transparente, `viewBox` e não dependem de fontes externas. O link da marca no Header mantém um único nome acessível: “VacineKids — página inicial”.
+
 ## Observação de saúde
 
 Este é um projeto demonstrativo. Informações de vacinação não substituem avaliação e orientação de um profissional de saúde.
