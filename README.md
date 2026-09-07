@@ -13,10 +13,11 @@ Implementado:
 - carrinho com quantidade, remoção, limpeza, subtotal e `localStorage`;
 - estados de carregamento, erro, API offline, lista vazia e retry;
 - integração REST real.
+- Fase 1B: cadastro, login, sessão server-side, logout, Minha conta e rota administrativa demonstrativa.
 
 Ainda não implementado:
 
-- autenticação e dependentes;
+- dependentes;
 - checkout e pedidos;
 - pagamentos;
 - agendamento;
@@ -31,7 +32,7 @@ Ainda não implementado:
 - CSS modularizado por área, sem Tailwind;
 - Vitest, Testing Library e MSW.
 
-O Fetch foi escolhido por já estar disponível no navegador e atender a este cliente somente de leitura sem adicionar outra abstração. O módulo `src/api/httpClient.ts` centraliza URL, timeout, envelope de resposta e erros amigáveis.
+O Fetch foi escolhido por já estar disponível no navegador sem adicionar outra abstração. O módulo `src/api/httpClient.ts` centraliza URL, timeout, GET/POST/PATCH/DELETE, envelope de resposta e erros amigáveis. `apiGet` mantém seu contrato anterior.
 
 ## Arquitetura
 
@@ -42,9 +43,9 @@ PostgreSQL → Prisma → Express REST → vacinekids-web → Catálogo → Deta
 As responsabilidades principais são separadas em:
 
 - `api/`: transporte HTTP e normalização de erros;
-- `services/`: operações do domínio de catálogo;
-- `types/`: contrato REST e modelo mínimo do carrinho;
-- `contexts/`: estado global e persistência do carrinho;
+- `services/`: operações de catálogo e autenticação;
+- `types/`: contrato REST, usuário público e modelo mínimo do carrinho;
+- `contexts/`: sessão em memória e persistência independente do carrinho;
 - `components/`: layout, estados e elementos reutilizáveis;
 - `pages/`: composição de cada rota;
 - `test/`: servidor MSW, fixtures e utilitários de teste.
@@ -55,14 +56,7 @@ Os objetos completos da API não são salvos no carrinho. Cada item mantém apen
 
 Pré-requisitos: Node.js 22+, npm e o backend `vacinekids-api-demo` configurado com PostgreSQL.
 
-1. No repositório do backend, copie `.env.example` para `.env`, inicie o PostgreSQL e execute:
-
-   ```bash
-   npm install
-   npm run prisma:migrate
-   npm run db:seed
-   npm run dev
-   ```
+1. Disponibilize o backend já configurado em `http://localhost:3001`, com `NODE_ENV=development`, `FRONTEND_URL=http://localhost:5173` e conexão exclusivamente ao PostgreSQL local. Não sobrescreva um `.env` vinculado ao Neon. Esta fase não exige migration nem seed.
 
 2. Neste projeto, crie o ambiente e inicie o frontend:
 
@@ -73,6 +67,8 @@ Pré-requisitos: Node.js 22+, npm e o backend `vacinekids-api-demo` configurado 
    ```
 
 3. Acesse `http://localhost:5173/vacinekids-web/`.
+
+Para testar sem editar arquivos de ambiente, no PowerShell defina `$env:VITE_API_URL='http://localhost:3001'` antes de `npm run dev -- --host localhost --port 5173 --strictPort`. Não altere a variável de produção.
 
 No Windows PowerShell, use `Copy-Item .env.example .env` no lugar de `cp`.
 
@@ -93,6 +89,26 @@ Informe a origem da API sem segredo. O cliente acrescenta `/api/v1`. Ele também
 | `/vacinas/:id` | Detalhes de uma vacina |
 | `/pacotes/:id` | Detalhes de um pacote |
 | `/carrinho` | Seleção persistida |
+| `/cadastro` | Cadastro sem login automático |
+| `/login` | Entrada e retorno a destino interno permitido |
+| `/minha-conta` | Email e tipo de conta; exige sessão |
+| `/admin` | Placeholder; exige ADMIN |
+
+As rotas continuam usando HashRouter, por exemplo `http://localhost:5173/vacinekids-web/#/login`.
+
+## Autenticação — Fase 1B
+
+`authService` consome POST `/api/v1/auth/register`, `/login`, `/logout` e GET `/me`. Requisições auth usam `credentials: "include"`; escritas usam JSON e `X-VacineKids-CSRF: 1`. GETs não enviam esse header. Logout aceita 204 sem tentar ler JSON. Consultas públicas do catálogo continuam sem cookies.
+
+`AuthProvider`, dentro do router, reconstrói a sessão por `/me` ao iniciar. 401 é visitante sem erro; rede/5xx produzem erro recuperável e não apagam um usuário previamente confirmado. Logout só limpa o usuário após confirmação; uma falha oferece nova tentativa da revogação, sem fingir saída. Um contador de geração invalida respostas antigas de `/me` após login/logout. A atualização após logout acompanha a prioridade de transição do router para retornar à Home sem disputa com os guards.
+
+`ProtectedRoute` aguarda a sessão, oferece retry em falhas e preserva o destino antes de enviar visitantes ao login. `AdminRoute` mostra 403 para CUSTOMER e permite ADMIN; a segurança real permanece no backend. Somente rotas internas explicitamente permitidas são aceitas como destino pós-login.
+
+Cadastro valida email, senha de 15–128 caracteres Unicode após NFC e confirmação equivalente. Espaços são preservados, inclusive no início/fim; não há regras de composição nem bloqueio de colagem. Login usa a mensagem genérica “Email ou senha inválidos.” em 401. Mensagens internas do backend nunca são apresentadas. Formulários têm labels, autocomplete, feedback com foco e bloqueio durante envio.
+
+Não há JWT, leitura de cookie pelo código da aplicação, armazenamento de usuário/credenciais em Web Storage ou autenticação junto ao carrinho. O único estado persistido pela aplicação continua sendo `vacinekids-cart-v1`. O cookie HttpOnly é responsabilidade do navegador. O Header diferencia visitante/CUSTOMER/ADMIN e mantém menu recolhido em telas de até 1040 px.
+
+Na Fase 1C-A, a publicação no GitHub Pages usa temporariamente a sessão cross-site do Render para medir compatibilidade real antes da decisão sobre domínio próprio. O backend mantém `SameSite=Lax` localmente e usa `SameSite=None; Secure` somente em produção. Profile, dependentes e dashboard continuam fora desta etapa.
 
 ## Integração com a API
 
@@ -111,22 +127,37 @@ npm run lint
 npm run typecheck
 npm test
 npm run build
+npm audit
 ```
 
 Os testes cobrem catálogo, loading, falha da API, filtro, detalhes, inclusão de vacina e pacote, alteração e remoção, persistência e recuperação segura do `localStorage`.
+
+A suíte ampliada também cobre authService/HTTP, AuthProvider, corrida com `/me`, StrictMode, cadastro, login/logout, retorno interno, guards, Header e independência do carrinho. `npm test` usa MSW/serviços simulados: não exige banco e não chama produção.
+
+Em 2026-09-04: 95 testes aprovados (22 anteriores preservados e 73 novos), lint/typecheck/build aprovados e `npm audit` com zero vulnerabilidades. Não houve atualização de dependências.
+
+### Smoke test opcional em Chrome real
+
+`scripts/auth-local-smoke.mjs` não faz parte de `npm test`. Com API e Vite locais rodando e um Playwright já instalado externamente, defina `PLAYWRIGHT_MODULE` para seu `index.mjs` e `CHROME_EXECUTABLE` para o executável do Chrome. Após conferir explicitamente que o backend aponta ao PostgreSQL loopback, defina `CONFIRM_LOCAL_POSTGRES=yes` e execute:
+
+```bash
+node scripts/auth-local-smoke.mjs
+```
+
+O script cria uma conta fictícia CUSTOMER via HTTP **local**, valida cookie HttpOnly (incluindo invisibilidade a document.cookie apenas no diagnóstico), reload, 403, falha/recuperação de logout e carrinho. A conta fica no banco local; a sessão criada é revogada. Não promove ADMIN, não altera schema nem executa seed. Bloqueia URLs HTTP externas no contexto do navegador. Não imprime senhas/cookies e não salva storageState. Capturas desktop/mobile ficam em `test-results/`, ignorado pelo Git.
+
+Validação em 2026-09-04: fluxo real aprovado em Chrome, incluindo ausência de restauração após logout. ADMIN foi validado em testes simulados; nenhum ADMIN foi criado.
 
 ## GitHub Pages
 
 Foi escolhido `HashRouter`, pois a parte após `#` permanece no navegador e evita erros 404 ao atualizar uma rota diretamente no GitHub Pages. O `vite.config.ts` usa a base `/vacinekids-web/`.
 
-O workflow `.github/workflows/deploy-pages.yml` está preparado para o repositório `vacinekids-web`. Antes de publicar:
+O workflow `.github/workflows/deploy-pages.yml` publica o repositório `vacinekids-web`. A configuração necessária é:
 
-1. hospede o backend em uma URL HTTPS pública;
-2. configure no repositório a variável `VITE_API_URL` com essa origem;
-3. permita no CORS do backend a origem do GitHub Pages;
-4. em **Settings → Pages**, selecione **GitHub Actions** como fonte.
-
-O workflow é apenas uma preparação e não publica nada por conta própria até que o repositório exista e o gatilho seja executado.
+1. backend em uma URL HTTPS pública;
+2. variável do repositório `VITE_API_URL` com a origem `https://vacinekids-api-demo.onrender.com`;
+3. CORS do backend com a origem exata `https://danielmartinez2.github.io` e credentials habilitadas;
+4. **Settings → Pages** usando **GitHub Actions** como fonte.
 
 ## Arquitetura original
 

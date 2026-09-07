@@ -61,6 +61,8 @@
   background: var(--blue-050);
 }
 
+.nav-button { border: 0; background: transparent; font: inherit; font-size: .93rem; font-weight: 700; }
+
 .cart-link {
   margin-left: 0.35rem;
   color: white;
@@ -144,7 +146,7 @@
   font-size: 0.82rem;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 1040px) {
   .header-inner { min-height: 68px; }
   .brand-link img { width: 176px; height: 36px; }
   .menu-toggle { display: grid; }
@@ -164,5 +166,8 @@
   .main-nav.is-open { display: grid; }
   .nav-link, .cart-link { justify-content: center; }
   .cart-link { margin-left: 0; }
+}
+
+@media (max-width: 760px) {
   .footer-grid { grid-template-columns: 1fr; gap: 2rem; }
 }
