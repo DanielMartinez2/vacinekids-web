@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { authFormError, safeLoginDestination, validateAuthForm } from '../../utils/auth'
-import { LogoutButton } from '../../components/auth/LogoutButton'
 import './auth.css'
 
 function AuthForm({ registration = false }: { registration?: boolean }) {
@@ -75,15 +74,6 @@ function AuthForm({ registration = false }: { registration?: boolean }) {
 }
 export function LoginPage() { return <AuthForm /> }
 export function RegisterPage() { return <AuthForm registration /> }
-export function AccountPage() {
-  const { user } = useAuth()
-  return <section className="container auth-page"><div className="auth-card">
-    <p className="auth-eyebrow">Sua conta VacineKids</p><h1>Minha conta</h1>
-    <dl className="account-details"><dt>Email</dt><dd>{user?.email}</dd><dt>Tipo de conta</dt>
-      <dd>{user?.role === 'ADMIN' ? 'Administrador' : 'Cliente'}</dd></dl>
-    <LogoutButton />
-  </div></section>
-}
 export function AdminPage() {
   return <section className="container auth-page"><div className="auth-card">
     <p className="auth-eyebrow">VacineKids</p><h1>Área administrativa</h1>

@@ -6,6 +6,8 @@ const meta = (total: number, page = 1, pageSize = 6) => ({ page, pageSize, total
 
 export const handlers = [
   http.get(`${API_BASE_URL}/auth/me`, () => HttpResponse.json({ data: null, error: { code: 'UNAUTHENTICATED', message: 'Autenticação necessária.' } }, { status: 401 })),
+  http.get(`${API_BASE_URL}/profile`, () => HttpResponse.json({ data: null, error: null })),
+  http.get(`${API_BASE_URL}/dependents`, () => HttpResponse.json({ data: [], meta: meta(0, 1, 20), error: null })),
   http.get(`${API_BASE_URL}/age-ranges`, () => HttpResponse.json({ data: [babyRange, childRange], meta: meta(2, 1, 100), error: null })),
   http.get(`${API_BASE_URL}/vaccines`, ({ request }) => {
     const url = new URL(request.url)

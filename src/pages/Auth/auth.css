@@ -15,6 +15,3 @@
 .auth-card button:disabled, .main-nav button:disabled { cursor: wait; opacity: .65; transform: none; box-shadow: none; }
 .auth-status { padding-block: 1.5rem; }
 .auth-status .state-card { min-height: 100px; flex-wrap: wrap; }
-.account-details { margin-block: 2rem; overflow-wrap: anywhere; }
-.account-details dt { font-size: .85rem; color: var(--ink-600); }
-.account-details dd { margin: .3rem 0 1.2rem; font-weight: 700; }

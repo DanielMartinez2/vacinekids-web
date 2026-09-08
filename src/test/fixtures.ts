@@ -1,4 +1,21 @@
 import type { AgeRange, Vaccine, VaccinePackage } from '../types/catalog'
+import type { CustomerProfile, Dependent } from '../types/customer'
+
+export const customerProfileFixture: CustomerProfile = {
+  id: '40000000-0000-4000-8000-000000000001',
+  name: 'Marina Exemplo',
+  phone: '+5511999990001',
+  createdAt: '2026-01-01T00:00:00.000Z',
+  updatedAt: '2026-01-01T00:00:00.000Z',
+}
+
+export const dependentFixture: Dependent = {
+  id: '50000000-0000-4000-8000-000000000001',
+  name: 'Lia Exemplo',
+  birthDate: '2021-05-12',
+  createdAt: '2026-01-01T00:00:00.000Z',
+  updatedAt: '2026-01-01T00:00:00.000Z',
+}
 
 export const babyRange: AgeRange = { id: '10000000-0000-4000-8000-000000000001', slug: 'bebes', name: 'Bebês', minAgeMonths: 0, maxAgeMonths: 24, sortOrder: 1 }
 export const childRange: AgeRange = { id: '10000000-0000-4000-8000-000000000002', slug: 'crianca', name: 'Criança', minAgeMonths: 25, maxAgeMonths: 144, sortOrder: 2 }

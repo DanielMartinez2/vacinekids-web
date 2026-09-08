@@ -26,7 +26,7 @@ function friendlyHttpMessage(status: number) {
   return 'Não foi possível concluir a solicitação.'
 }
 interface RequestOptions {
-  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE'
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
   body?: unknown
   authenticated?: boolean
   timeoutMs?: number

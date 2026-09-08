@@ -12,7 +12,8 @@ import { AppLayout } from '../../layouts/AppLayout'
 import { renderWithProviders } from '../../test/render'
 import { server } from '../../test/server'
 import { safeLoginDestination, validateAuthForm } from '../../utils/auth'
-import { AccountPage, AdminPage, LoginPage, RegisterPage } from './AuthPages'
+import { AccountPage } from '../Account/AccountPage'
+import { AdminPage, LoginPage, RegisterPage } from './AuthPages'
 
 const customer = { id: 'customer-1', email: 'cliente@example.test', role: 'CUSTOMER', status: 'ACTIVE' }
 const fail = (status: number) => HttpResponse.json({ data: null, error: { code: 'INTERNAL', message: 'private SQL details' } }, { status })

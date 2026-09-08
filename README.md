@@ -13,11 +13,11 @@ Implementado:
 - carrinho com quantidade, remoção, limpeza, subtotal e `localStorage`;
 - estados de carregamento, erro, API offline, lista vazia e retry;
 - integração REST real.
-- Fase 1B: cadastro, login, sessão server-side, logout, Minha conta e rota administrativa demonstrativa.
+- Fase 1B: cadastro, login, sessão server-side, logout e rota administrativa demonstrativa;
+- Fase 2B: Minha Conta com perfil do responsável e dependentes para CUSTOMER.
 
 Ainda não implementado:
 
-- dependentes;
 - checkout e pedidos;
 - pagamentos;
 - agendamento;
@@ -32,7 +32,7 @@ Ainda não implementado:
 - CSS modularizado por área, sem Tailwind;
 - Vitest, Testing Library e MSW.
 
-O Fetch foi escolhido por já estar disponível no navegador sem adicionar outra abstração. O módulo `src/api/httpClient.ts` centraliza URL, timeout, GET/POST/PATCH/DELETE, envelope de resposta e erros amigáveis. `apiGet` mantém seu contrato anterior.
+O Fetch foi escolhido por já estar disponível no navegador sem adicionar outra abstração. O módulo `src/api/httpClient.ts` centraliza URL, timeout, GET/POST/PUT/PATCH/DELETE, envelope de resposta e erros amigáveis. `apiGet` mantém seu contrato anterior.
 
 ## Arquitetura
 
@@ -43,8 +43,8 @@ PostgreSQL → Prisma → Express REST → vacinekids-web → Catálogo → Deta
 As responsabilidades principais são separadas em:
 
 - `api/`: transporte HTTP e normalização de erros;
-- `services/`: operações de catálogo e autenticação;
-- `types/`: contrato REST, usuário público e modelo mínimo do carrinho;
+- `services/`: operações de catálogo, autenticação, perfil e dependentes;
+- `types/`: contratos REST públicos, usuário, conta e modelo mínimo do carrinho;
 - `contexts/`: sessão em memória e persistência independente do carrinho;
 - `components/`: layout, estados e elementos reutilizáveis;
 - `pages/`: composição de cada rota;
@@ -91,7 +91,7 @@ Informe a origem da API sem segredo. O cliente acrescenta `/api/v1`. Ele também
 | `/carrinho` | Seleção persistida |
 | `/cadastro` | Cadastro sem login automático |
 | `/login` | Entrada e retorno a destino interno permitido |
-| `/minha-conta` | Email e tipo de conta; exige sessão |
+| `/minha-conta` | Acesso e, para CUSTOMER, perfil do responsável e dependentes; exige sessão |
 | `/admin` | Placeholder; exige ADMIN |
 
 As rotas continuam usando HashRouter, por exemplo `http://localhost:5173/vacinekids-web/#/login`.
@@ -108,7 +108,15 @@ Cadastro valida email, senha de 15–128 caracteres Unicode após NFC e confirma
 
 Não há JWT, leitura de cookie pelo código da aplicação, armazenamento de usuário/credenciais em Web Storage ou autenticação junto ao carrinho. O único estado persistido pela aplicação continua sendo `vacinekids-cart-v1`. O cookie HttpOnly é responsabilidade do navegador. O Header diferencia visitante/CUSTOMER/ADMIN e mantém menu recolhido em telas de até 1040 px.
 
-Na Fase 1C-A, a publicação no GitHub Pages usa temporariamente a sessão cross-site do Render para medir compatibilidade real antes da decisão sobre domínio próprio. O backend mantém `SameSite=Lax` localmente e usa `SameSite=None; Secure` somente em produção. Profile, dependentes e dashboard continuam fora desta etapa.
+Na Fase 1C-A, a publicação no GitHub Pages usa temporariamente a sessão cross-site do Render para medir compatibilidade real antes da decisão sobre domínio próprio. O backend mantém `SameSite=Lax` localmente e usa `SameSite=None; Secure` somente em produção. O dashboard administrativo continua fora desta etapa.
+
+## Minha Conta — Fase 2B
+
+`/minha-conta` mantém os dados de acesso disponíveis enquanto perfil e dependentes carregam em paralelo. CUSTOMER pode criar ou editar o `CustomerProfile` e listar, adicionar, editar e remover dependentes em formulários inline. ADMIN vê somente email, papel e logout: o frontend não chama as APIs exclusivas de CUSTOMER para esse papel.
+
+O telefone aceita apresentação brasileira amigável e é normalizado para E.164 antes do `PUT /profile`; ao exibir um número brasileiro conhecido, a máscara é reaplicada. `birthDate` trafega como data civil `YYYY-MM-DD`, entra diretamente no `input type=date` e é montada como `DD/MM/YYYY` sem conversão por timezone.
+
+Profile e dependentes permanecem somente no estado da página. Eles não são colocados no `AuthProvider`, `localStorage`, `sessionStorage` ou IndexedDB. O carrinho continua sendo o único estado persistido pela aplicação e mantém sua chave independente.
 
 ## Integração com a API
 
@@ -116,7 +124,10 @@ O frontend consome:
 
 - `GET /api/v1/vaccines` e `GET /api/v1/vaccines/:id`;
 - `GET /api/v1/packages` e `GET /api/v1/packages/:id`;
-- `GET /api/v1/age-ranges`.
+- `GET /api/v1/age-ranges`;
+- `GET` e `PUT /api/v1/profile`;
+- `GET` e `POST /api/v1/dependents`;
+- `GET`, `PATCH` e `DELETE /api/v1/dependents/:id`.
 
 A busca e o filtro `ageRange` por slug são enviados para a API tanto em vacinas quanto em pacotes. A compatibilidade de um pacote com a faixa etária é definida exclusivamente pelo backend, e sua paginação usa `page`, `pageSize` e a metadata retornada pela API.
 
@@ -132,9 +143,9 @@ npm audit
 
 Os testes cobrem catálogo, loading, falha da API, filtro, detalhes, inclusão de vacina e pacote, alteração e remoção, persistência e recuperação segura do `localStorage`.
 
-A suíte ampliada também cobre authService/HTTP, AuthProvider, corrida com `/me`, StrictMode, cadastro, login/logout, retorno interno, guards, Header e independência do carrinho. `npm test` usa MSW/serviços simulados: não exige banco e não chama produção.
+A suíte ampliada também cobre authService/HTTP, AuthProvider, corrida com `/me`, StrictMode, cadastro, login/logout, retorno interno, guards, Header, CustomerProfile, dependentes, normalização de telefone/data e independência do carrinho. `npm test` usa MSW/serviços simulados: não exige banco e não chama produção.
 
-Em 2026-09-04: 95 testes aprovados (22 anteriores preservados e 73 novos), lint/typecheck/build aprovados e `npm audit` com zero vulnerabilidades. Não houve atualização de dependências.
+Em 2026-09-08: 135 testes aprovados, lint/typecheck/build aprovados e `npm audit` com zero vulnerabilidades. Não houve atualização de dependências.
 
 ### Smoke test opcional em Chrome real
 

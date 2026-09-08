@@ -11,7 +11,8 @@ import { CartPage } from './pages/Cart/CartPage'
 import { AuthProvider } from './contexts/AuthContext'
 import { ProtectedRoute } from './components/auth/ProtectedRoute'
 import { AdminRoute } from './components/auth/AdminRoute'
-import { LoginPage, RegisterPage, AccountPage, AdminPage } from './pages/Auth/AuthPages'
+import { LoginPage, RegisterPage, AdminPage } from './pages/Auth/AuthPages'
+import { AccountPage } from './pages/Account/AccountPage'
 
 export default function App() {
   return (
