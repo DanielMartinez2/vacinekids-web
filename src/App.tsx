@@ -13,6 +13,10 @@ import { ProtectedRoute } from './components/auth/ProtectedRoute'
 import { AdminRoute } from './components/auth/AdminRoute'
 import { LoginPage, RegisterPage, AdminPage } from './pages/Auth/AuthPages'
 import { AccountPage } from './pages/Account/AccountPage'
+import { CustomerRoute } from './components/auth/CustomerRoute'
+import { CheckoutPage } from './pages/Checkout/CheckoutPage'
+import { OrdersPage } from './pages/Orders/OrdersPage'
+import { OrderDetailsPage } from './pages/Orders/OrderDetailsPage'
 
 export default function App() {
   return (
@@ -31,6 +35,11 @@ export default function App() {
             <Route path="cadastro" element={<RegisterPage />} />
             <Route element={<ProtectedRoute />}>
               <Route path="minha-conta" element={<AccountPage />} />
+            </Route>
+            <Route element={<CustomerRoute />}>
+              <Route path="checkout" element={<CheckoutPage />} />
+              <Route path="pedidos" element={<OrdersPage />} />
+              <Route path="pedidos/:id" element={<OrderDetailsPage />} />
             </Route>
             <Route element={<AdminRoute />}>
               <Route path="admin" element={<AdminPage />} />

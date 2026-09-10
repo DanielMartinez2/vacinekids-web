@@ -23,10 +23,10 @@ describe('CartPage', () => {
     expect(screen.getByRole('heading', { name: 'Seu carrinho está vazio' })).toBeInTheDocument()
   })
 
-  it('mantém a finalização desabilitada e explica o escopo futuro', () => {
+  it('oferece checkout natural e mantém Payment fora do escopo', () => {
     localStorage.setItem(CART_STORAGE_KEY, JSON.stringify([{ type: 'package', id: 'p-1', name: 'Pacote Teste', price: 300, quantity: 1 }]))
     renderWithProviders(<CartPage />)
-    expect(screen.getByRole('button', { name: 'Finalização indisponível' })).toBeDisabled()
-    expect(screen.getByText(/Pedidos, pagamentos e agendamentos/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Finalizar pedido/ })).toHaveAttribute('href', '/checkout')
+    expect(screen.getByText(/Pagamentos e agendamentos ainda não/)).toBeInTheDocument()
   })
 })

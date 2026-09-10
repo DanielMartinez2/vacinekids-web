@@ -1,6 +1,9 @@
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
+import { http, HttpResponse } from 'msw'
+import { API_BASE_URL } from '../../api/httpClient'
+import { server } from '../../test/server'
 import logo from '../../assets/branding/vacinekids-logo.svg'
 import mark from '../../assets/branding/vacinekids-mark.svg'
 import { HomePage } from '../../pages/Home/HomePage'
@@ -32,5 +35,16 @@ describe('identidade VacineKids', () => {
     expect(screen.getByRole('img', { name: 'VacineKids' })).toHaveAttribute('src', logo)
     expect(screen.getByRole('contentinfo').querySelector('img')).toHaveAttribute('src', mark)
     expect(screen.getByText('© 2026 VacineKids. Projeto demonstrativo.')).toBeInTheDocument()
+  })
+
+  it('mostra Meus pedidos somente para CUSTOMER autenticado', async () => {
+    server.use(http.get(API_BASE_URL + '/auth/me', () => HttpResponse.json({ data: { id: 'u1', email: 'customer@example.test', role: 'CUSTOMER', status: 'ACTIVE' }, error: null })))
+    const customer = renderWithProviders(<Header />)
+    expect(await screen.findByRole('link', { name: 'Meus pedidos' })).toHaveAttribute('href', '/pedidos')
+    customer.unmount()
+    server.use(http.get(API_BASE_URL + '/auth/me', () => HttpResponse.json({ data: { id: 'a1', email: 'admin@example.test', role: 'ADMIN', status: 'ACTIVE' }, error: null })))
+    renderWithProviders(<Header />)
+    expect(await screen.findByRole('link', { name: 'Administração' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Meus pedidos' })).not.toBeInTheDocument()
   })
 })

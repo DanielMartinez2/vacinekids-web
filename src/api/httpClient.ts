@@ -30,9 +30,10 @@ interface RequestOptions {
   body?: unknown
   authenticated?: boolean
   timeoutMs?: number
+  idempotencyKey?: string
 }
 export async function apiRequest<T>(path: string, {
-  method = 'GET', body, authenticated = false, timeoutMs = DEFAULT_TIMEOUT_MS,
+  method = 'GET', body, authenticated = false, timeoutMs = DEFAULT_TIMEOUT_MS, idempotencyKey,
 }: RequestOptions = {}): Promise<ApiResponse<T> | undefined> {
   const controller = new AbortController()
   const timeout = window.setTimeout(() => controller.abort(), timeoutMs)
@@ -43,6 +44,7 @@ export async function apiRequest<T>(path: string, {
       headers: {
         Accept: 'application/json',
         ...(writing ? { 'Content-Type': 'application/json', 'X-VacineKids-CSRF': '1' } : {}),
+        ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}),
       },
       credentials: authenticated ? 'include' : 'omit',
       ...(writing && body !== undefined ? { body: JSON.stringify(body) } : {}),

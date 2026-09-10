@@ -48,8 +48,8 @@ export function CartPage() {
               <div><span>Itens</span><strong>{itemCount}</strong></div>
               <div><span>Subtotal</span><strong>{formatCurrency(subtotal)}</strong></div>
               <div className="summary-total"><span>Total</span><strong>{formatCurrency(subtotal)}</strong></div>
-              <button className="button checkout-disabled" type="button" disabled>Finalização indisponível</button>
-              <p>Pedidos, pagamentos e agendamentos serão implementados em um marco futuro.</p>
+              <Link className="button button-primary checkout-link" to="/checkout">Finalizar pedido <ArrowRight size={18} aria-hidden="true" /></Link>
+              <p>Os valores serão conferidos pela API antes da confirmação. Pagamentos e agendamentos ainda não fazem parte desta fase.</p>
             </aside>
           </div>
         )}

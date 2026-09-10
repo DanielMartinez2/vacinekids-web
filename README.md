@@ -15,10 +15,10 @@ Implementado:
 - integração REST real.
 - Fase 1B: cadastro, login, sessão server-side, logout e rota administrativa demonstrativa;
 - Fase 2B: Minha Conta com perfil do responsável e dependentes para CUSTOMER.
+- Fase 3C local: checkout autoritativo, seleção de destinatários, criação idempotente e histórico/cancelamento de pedidos com MSW.
 
 Ainda não implementado:
 
-- checkout e pedidos;
 - pagamentos;
 - agendamento;
 - área administrativa funcional.
@@ -37,14 +37,14 @@ O Fetch foi escolhido por já estar disponível no navegador sem adicionar outra
 ## Arquitetura
 
 ```text
-PostgreSQL → Prisma → Express REST → vacinekids-web → Catálogo → Detalhes → Carrinho
+PostgreSQL → Prisma → Express REST → vacinekids-web → Catálogo → Carrinho → Checkout → Pedidos
 ```
 
 As responsabilidades principais são separadas em:
 
 - `api/`: transporte HTTP e normalização de erros;
-- `services/`: operações de catálogo, autenticação, perfil e dependentes;
-- `types/`: contratos REST públicos, usuário, conta e modelo mínimo do carrinho;
+- `services/`: operações de catálogo, autenticação, perfil, dependentes, checkout e pedidos;
+- `types/`: contratos REST públicos, usuário, conta, pedidos e modelo mínimo do carrinho;
 - `contexts/`: sessão em memória e persistência independente do carrinho;
 - `components/`: layout, estados e elementos reutilizáveis;
 - `pages/`: composição de cada rota;
@@ -92,6 +92,9 @@ Informe a origem da API sem segredo. O cliente acrescenta `/api/v1`. Ele também
 | `/cadastro` | Cadastro sem login automático |
 | `/login` | Entrada e retorno a destino interno permitido |
 | `/minha-conta` | Acesso e, para CUSTOMER, perfil do responsável e dependentes; exige sessão |
+| `/checkout` | Seleção de destinatários e revisão autoritativa; exige CUSTOMER |
+| `/pedidos` | Histórico paginado do CUSTOMER |
+| `/pedidos/:id` | Snapshots, itens, destinatários, componentes e cancelamento do pedido |
 | `/admin` | Placeholder; exige ADMIN |
 
 As rotas continuam usando HashRouter, por exemplo `http://localhost:5173/vacinekids-web/#/login`.
@@ -118,6 +121,18 @@ O telefone aceita apresentação brasileira amigável e é normalizado para E.16
 
 Profile e dependentes permanecem somente no estado da página. Eles não são colocados no `AuthProvider`, `localStorage`, `sessionStorage` ou IndexedDB. O carrinho continua sendo o único estado persistido pela aplicação e mantém sua chave independente.
 
+## Checkout e pedidos — Fase 3C local
+
+O carrinho continua exclusivamente em `vacinekids-cart-v1`; seu formato não mudou e nenhum destinatário ou dado pessoal foi adicionado. Cada `quantity` cria a mesma quantidade de slots “Destinatário N”, mas o frontend envia somente `productType`, `productId` e `recipients`. Preço, quantidade comercial, total, moeda, nomes, fabricantes, snapshots e composição nunca são enviados como autoridade.
+
+O botão “Revisar pedido” chama explicitamente `POST /checkout/preview`. A resposta da API é a fonte de preços, totais, destinatários resolvidos e composição de Package. O preço antigo do carrinho serve apenas para informar quando houve atualização; Package permanece um único item comercial e suas vacinas aparecem como composição.
+
+Ao confirmar, o frontend gera `Idempotency-Key` com `crypto.randomUUID()` e congela em memória a chave, o fingerprint e o body. Em timeout ou erro de rede, “Tentar novamente” reutiliza exatamente a mesma tentativa. Respostas `201` e replay `200` são sucesso equivalente: somente então o carrinho é limpo e a navegação segue para `/pedidos/:id`. `CHECKOUT_CHANGED` descarta a tentativa e exige novo preview; erros de produto, destinatário, perfil, rate limit ou indisponibilidade preservam o carrinho.
+
+`/pedidos` apresenta histórico paginado e `/pedidos/:id` usa apenas os snapshots retornados pelo Order, inclusive datas civis sem conversão de timezone. O cancelamento exige confirmação e envia `POST /orders/:id/cancel` com `{}`, sem Idempotency-Key. Apenas `PENDING_PAYMENT` oferece essa ação.
+
+`CustomerRoute` aguarda a reconstrução de sessão, preserva o destino de visitantes e mostra 403 para ADMIN. O Header exibe “Meus pedidos” apenas para CUSTOMER. Checkout, preview, fingerprint, chave idempotente, recipients, Orders, snapshots, telefone e birthDate não são gravados em Web Storage. A Fase 3C permanece local e simulada por MSW; integração com o backend real e publicação pertencem às próximas fases. Payment, Mercado Pago, agendamento e estoque não estão implementados.
+
 ## Integração com a API
 
 O frontend consome:
@@ -127,7 +142,11 @@ O frontend consome:
 - `GET /api/v1/age-ranges`;
 - `GET` e `PUT /api/v1/profile`;
 - `GET` e `POST /api/v1/dependents`;
-- `GET`, `PATCH` e `DELETE /api/v1/dependents/:id`.
+- `GET`, `PATCH` e `DELETE /api/v1/dependents/:id`;
+- `POST /api/v1/checkout/preview`;
+- `POST` e `GET /api/v1/orders`;
+- `GET /api/v1/orders/:id`;
+- `POST /api/v1/orders/:id/cancel`.
 
 A busca e o filtro `ageRange` por slug são enviados para a API tanto em vacinas quanto em pacotes. A compatibilidade de um pacote com a faixa etária é definida exclusivamente pelo backend, e sua paginação usa `page`, `pageSize` e a metadata retornada pela API.
 
@@ -143,9 +162,11 @@ npm audit
 
 Os testes cobrem catálogo, loading, falha da API, filtro, detalhes, inclusão de vacina e pacote, alteração e remoção, persistência e recuperação segura do `localStorage`.
 
-A suíte ampliada também cobre authService/HTTP, AuthProvider, corrida com `/me`, StrictMode, cadastro, login/logout, retorno interno, guards, Header, CustomerProfile, dependentes, normalização de telefone/data e independência do carrinho. `npm test` usa MSW/serviços simulados: não exige banco e não chama produção.
+A suíte ampliada também cobre authService/HTTP, AuthProvider, corrida com `/me`, StrictMode, cadastro, login/logout, retorno interno, guards, Header, CustomerProfile, dependentes, normalização de telefone/data, CustomerRoute, preview, preços, slots, idempotência/retry, histórico, snapshots e cancelamento. `npm test` usa MSW/serviços simulados: não exige banco e não chama produção.
 
 Em 2026-09-08: 135 testes aprovados, lint/typecheck/build aprovados e `npm audit` com zero vulnerabilidades. Não houve atualização de dependências.
+
+Em 2026-09-09, após a Fase 3C local: 200 testes aprovados (135 anteriores + 65 novos), lint/typecheck/build aprovados e `npm audit` com zero vulnerabilidades. Nenhuma dependência foi atualizada.
 
 ### Smoke test opcional em Chrome real
 

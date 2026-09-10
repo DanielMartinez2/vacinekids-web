@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw'
 import { API_BASE_URL } from '../api/httpClient'
-import { babyRange, childRange, childVaccineFixture, packageFixture, vaccineFixture } from './fixtures'
+import { babyRange, checkoutPreviewFixture, childRange, childVaccineFixture, orderDetailsFixture, orderSummaryFixture, packageFixture, vaccineFixture } from './fixtures'
 
 const meta = (total: number, page = 1, pageSize = 6) => ({ page, pageSize, total, totalPages: Math.ceil(total / pageSize) })
 
@@ -29,4 +29,11 @@ export const handlers = [
   }),
   http.get(`${API_BASE_URL}/vaccines/:id`, ({ params }) => params.id === vaccineFixture.id ? HttpResponse.json({ data: vaccineFixture, error: null }) : HttpResponse.json({ data: null, error: { code: 'VACCINE_NOT_FOUND', message: 'Vaccine not found' } }, { status: 404 })),
   http.get(`${API_BASE_URL}/packages/:id`, ({ params }) => params.id === packageFixture.id ? HttpResponse.json({ data: packageFixture, error: null }) : HttpResponse.json({ data: null, error: { code: 'PACKAGE_NOT_FOUND', message: 'Package not found' } }, { status: 404 })),
+  http.post(`${API_BASE_URL}/checkout/preview`, () => HttpResponse.json({ data: checkoutPreviewFixture, error: null })),
+  http.post(`${API_BASE_URL}/orders`, () => HttpResponse.json({ data: orderDetailsFixture, error: null }, { status: 201 })),
+  http.get(`${API_BASE_URL}/orders`, () => HttpResponse.json({ data: [orderSummaryFixture], meta: meta(1, 1, 20), error: null })),
+  http.get(`${API_BASE_URL}/orders/:id`, ({ params }) => params.id === orderDetailsFixture.id
+    ? HttpResponse.json({ data: orderDetailsFixture, error: null })
+    : HttpResponse.json({ data: null, error: { code: 'ORDER_NOT_FOUND', message: 'Order not found' } }, { status: 404 })),
+  http.post(`${API_BASE_URL}/orders/:id/cancel`, () => HttpResponse.json({ data: { ...orderDetailsFixture, status: 'CANCELLED', cancelledAt: '2026-09-09T13:00:00.000Z' }, error: null })),
 ]

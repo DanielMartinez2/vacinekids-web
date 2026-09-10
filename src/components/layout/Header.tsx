@@ -18,7 +18,7 @@ export function Header() {
   const { user, isAuthenticated, isLoading } = useAuth()
   const menuToggle = useRef<HTMLButtonElement>(null)
   const links = [...navigation, ...(isLoading ? [] : isAuthenticated
-    ? [...(user?.role === 'ADMIN' ? [{ to: '/admin', label: 'Administração' }] : []), { to: '/minha-conta', label: 'Minha conta' }]
+    ? [...(user?.role === 'ADMIN' ? [{ to: '/admin', label: 'Administração' }] : [{ to: '/pedidos', label: 'Meus pedidos' }]), { to: '/minha-conta', label: 'Minha conta' }]
     : [{ to: '/login', label: 'Entrar' }, { to: '/cadastro', label: 'Criar conta' }])]
 
   return (
