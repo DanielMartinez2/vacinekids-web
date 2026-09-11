@@ -46,7 +46,7 @@ const dateTime = (value: unknown) => {
   return parsed
 }
 const status = (value: unknown): OrderStatus => {
-  if (value !== 'PENDING_PAYMENT' && value !== 'CANCELLED') throw invalidResponse()
+  if (value !== 'PENDING_PAYMENT' && value !== 'PAID' && value !== 'CANCELLED') throw invalidResponse()
   return value
 }
 const currency = (value: unknown): 'BRL' => {
@@ -140,7 +140,7 @@ function orderFrom(value: unknown): OrderDetails {
   if (typeof order.number !== 'string' || !ORDER_NUMBER.test(order.number) || !Array.isArray(order.items)) throw invalidResponse()
   const cancelledAt = order.cancelledAt === null ? null : dateTime(order.cancelledAt)
   const parsedStatus = status(order.status)
-  if ((parsedStatus === 'PENDING_PAYMENT' && cancelledAt !== null) || (parsedStatus === 'CANCELLED' && cancelledAt === null)) throw invalidResponse()
+  if ((parsedStatus !== 'CANCELLED' && cancelledAt !== null) || (parsedStatus === 'CANCELLED' && cancelledAt === null)) throw invalidResponse()
   return {
     id: uuid(order.id),
     number: order.number,

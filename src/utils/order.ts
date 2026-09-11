@@ -61,8 +61,11 @@ export const formatOrderMoney = (value: string) => new Intl.NumberFormat('pt-BR'
   style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2,
 }).format(Number.parseFloat(value))
 
-export const orderStatusLabel = (status: OrderStatus) =>
-  status === 'PENDING_PAYMENT' ? 'Aguardando pagamento' : 'Cancelado'
+export const orderStatusLabel = (status: OrderStatus) => ({
+  PENDING_PAYMENT: 'Aguardando pagamento',
+  PAID: 'Pago',
+  CANCELLED: 'Cancelado',
+})[status]
 
 export const formatOrderDate = (value: string) => new Intl.DateTimeFormat('pt-BR', {
   dateStyle: 'short', timeStyle: 'short',

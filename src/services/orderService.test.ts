@@ -76,6 +76,15 @@ describe('orderService', () => {
     expect(cancelBody).toEqual({})
   })
 
+  it('aceita PAID em resumo e detalhe sem cancelledAt', async () => {
+    server.use(
+      http.get(API_BASE_URL + '/orders', () => HttpResponse.json({ data: [{ ...orderSummaryFixture, status: 'PAID' }], meta: { page: 1, pageSize: 20, total: 1, totalPages: 1 }, error: null })),
+      http.get(API_BASE_URL + '/orders/:id', () => envelope({ ...orderDetailsFixture, status: 'PAID' })),
+    )
+    await expect(orderService.listOrders()).resolves.toMatchObject({ items: [{ status: 'PAID' }] })
+    await expect(orderService.getOrder(orderDetailsFixture.id)).resolves.toMatchObject({ status: 'PAID', cancelledAt: null })
+  })
+
   it.each([
     [401, 'UNAUTHENTICATED'], [403, 'FORBIDDEN'], [404, 'ORDER_NOT_FOUND'], [409, 'CHECKOUT_CHANGED'],
     [422, 'VALIDATION_ERROR'], [429, 'RATE_LIMITED'], [503, 'DEPENDENCY_UNAVAILABLE'],
@@ -114,7 +123,7 @@ describe('orderService', () => {
 
   it.each([
     { ...orderDetailsFixture, number: '1' },
-    { ...orderDetailsFixture, status: 'PAID' },
+    { ...orderDetailsFixture, status: 'UNKNOWN' },
     { ...orderDetailsFixture, cancelledAt: '2026-01-01T00:00:00Z' },
     { ...orderDetailsFixture, customer: {} },
   ])('rejeita Order malformado em runtime', async (data) => {

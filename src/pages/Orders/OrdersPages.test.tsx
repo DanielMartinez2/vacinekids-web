@@ -4,7 +4,7 @@ import { http, HttpResponse } from 'msw'
 import { Route, Routes } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import { API_BASE_URL } from '../../api/httpClient'
-import { orderDetailsFixture, orderSummaryFixture } from '../../test/fixtures'
+import { orderDetailsFixture, orderSummaryFixture, paymentCancelledFixture, paymentPaidFixture, paymentPendingRejectedFixture, paymentProcessingFixture } from '../../test/fixtures'
 import { renderWithProviders } from '../../test/render'
 import { server } from '../../test/server'
 import { OrderDetailsPage } from './OrderDetailsPage'
@@ -57,6 +57,18 @@ describe('OrdersPage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(text as string)
     expect(screen.queryByText('private SQL data')).not.toBeInTheDocument()
   })
+
+  it('exibe Order PAID como Pago sem consultar Payment por card', async () => {
+    authenticate()
+    let paymentGets = 0
+    server.use(
+      http.get(API_BASE_URL + '/orders', () => HttpResponse.json({ data: [{ ...orderSummaryFixture, status: 'PAID' }], meta: { page: 1, pageSize: 20, total: 1, totalPages: 1 }, error: null })),
+      http.get(API_BASE_URL + '/orders/:id/payment', () => { paymentGets += 1; return success(paymentPaidFixture) }),
+    )
+    mountList()
+    expect(await screen.findByText('Pago')).toBeInTheDocument()
+    expect(paymentGets).toBe(0)
+  })
 })
 
 describe('OrderDetailsPage e cancelamento', () => {
@@ -86,13 +98,13 @@ describe('OrderDetailsPage e cancelamento', () => {
     }))
     mountDetail()
     const section = await screen.findByRole('region', { name: 'Ações do pedido' })
-    await userEvent.click(within(section).getByRole('button', { name: 'Cancelar pedido' }))
+    await userEvent.click(await within(section).findByRole('button', { name: 'Cancelar pedido' }))
     expect(within(section).getByText('Tem certeza de que deseja cancelar este pedido?')).toBeInTheDocument()
     expect(within(section).getByRole('button', { name: 'Cancelar pedido' })).toHaveFocus()
     await userEvent.click(within(section).getByRole('button', { name: 'Manter pedido' }))
     expect(calls).toBe(0)
-    await userEvent.click(within(section).getByRole('button', { name: 'Cancelar pedido' }))
-    await userEvent.click(within(section).getByRole('button', { name: 'Cancelar pedido' }))
+    await userEvent.click(await within(section).findByRole('button', { name: 'Cancelar pedido' }))
+    await userEvent.click(await within(section).findByRole('button', { name: 'Cancelar pedido' }))
     expect(await within(section).findByText(/Pedido cancelado em/)).toBeInTheDocument()
     expect(body).toEqual({})
     expect(key).toBeNull()
@@ -109,8 +121,8 @@ describe('OrderDetailsPage e cancelamento', () => {
     }))
     mountDetail()
     const section = await screen.findByRole('region', { name: 'Ações do pedido' })
-    await userEvent.click(within(section).getByRole('button', { name: 'Cancelar pedido' }))
-    await userEvent.click(within(section).getByRole('button', { name: 'Cancelar pedido' }))
+    await userEvent.click(await within(section).findByRole('button', { name: 'Cancelar pedido' }))
+    await userEvent.click(await within(section).findByRole('button', { name: 'Cancelar pedido' }))
     expect(await within(section).findByRole('alert')).toHaveTextContent('temporariamente indisponível')
     expect(screen.getByText('Aguardando pagamento')).toBeInTheDocument()
     await userEvent.click(within(section).getByRole('button', { name: 'Cancelar pedido' }))
@@ -126,7 +138,7 @@ describe('OrderDetailsPage e cancelamento', () => {
     server.use(http.post(API_BASE_URL + '/orders/:id/cancel', response))
     mountDetail()
     const section = await screen.findByRole('region', { name: 'Ações do pedido' })
-    await userEvent.click(within(section).getByRole('button', { name: 'Cancelar pedido' }))
+    await userEvent.click(await within(section).findByRole('button', { name: 'Cancelar pedido' }))
     await userEvent.click(within(section).getByRole('button', { name: 'Cancelar pedido' }))
     expect(await screen.findByRole('alert')).toHaveTextContent(message as string)
     if (kind === 'network') expect(screen.getByText('Aguardando pagamento')).toBeInTheDocument()
@@ -147,5 +159,81 @@ describe('OrderDetailsPage e cancelamento', () => {
     const section = await screen.findByRole('region', { name: 'Ações do pedido' })
     expect(await within(section).findByText(/Pedido cancelado em/)).toBeInTheDocument()
     expect(within(section).queryByRole('button', { name: 'Cancelar pedido' })).not.toBeInTheDocument()
+  })
+
+  it('aprovação 201 refaz GET Order, converge para PAID e remove pagar/cancelar', async () => {
+    authenticate()
+    let orderGets = 0
+    server.use(
+      http.get(API_BASE_URL + '/orders/:id', () => {
+        orderGets += 1
+        return success(orderGets === 1 ? orderDetailsFixture : { ...orderDetailsFixture, status: 'PAID' })
+      }),
+      http.get(API_BASE_URL + '/orders/:id/payment', () => success(null)),
+      http.post(API_BASE_URL + '/orders/:id/payment-attempts', () => success(paymentPaidFixture, 201)),
+    )
+    mountDetail()
+    await userEvent.click(await screen.findByRole('button', { name: 'Pagar pedido' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar pagamento' }))
+    expect(await screen.findByText('Pagamento aprovado.')).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByText('Pago')).toBeInTheDocument())
+    expect(orderGets).toBe(2)
+    expect(screen.queryByRole('button', { name: /Pagar pedido|Tentar novo pagamento/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Cancelar pedido' })).not.toBeInTheDocument()
+  })
+
+  it('Payment PROCESSING recuperado no reload oculta pagar e cancelar', async () => {
+    authenticate()
+    server.use(http.get(API_BASE_URL + '/orders/:id/payment', () => success(paymentProcessingFixture)))
+    mountDetail()
+    expect(await screen.findByText('Pagamento em processamento.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Pagar pedido|Tentar novo pagamento/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Cancelar pedido' })).not.toBeInTheDocument()
+    expect(screen.getAllByText('Não é possível cancelar enquanto o pagamento está em processamento.').length).toBeGreaterThan(0)
+  })
+
+  it('cancelamento com Payment PENDING terminal sincroniza Payment CANCELLED', async () => {
+    authenticate()
+    let paymentGets = 0
+    server.use(
+      http.get(API_BASE_URL + '/orders/:id/payment', () => success(++paymentGets === 1 ? paymentPendingRejectedFixture : paymentCancelledFixture)),
+      http.post(API_BASE_URL + '/orders/:id/cancel', () => success({ ...orderDetailsFixture, status: 'CANCELLED', cancelledAt: '2026-09-09T13:00:00.000Z' })),
+    )
+    mountDetail()
+    const section = await screen.findByRole('region', { name: 'Ações do pedido' })
+    await userEvent.click(await within(section).findByRole('button', { name: 'Cancelar pedido' }))
+    await userEvent.click(within(section).getByRole('button', { name: 'Cancelar pedido' }))
+    expect(await screen.findByText('Pagamento cancelado.')).toBeInTheDocument()
+    expect(await within(section).findByText(/Pedido cancelado em/)).toBeInTheDocument()
+    expect(paymentGets).toBe(2)
+  })
+
+  it('race de cancelamento 409 sincroniza Payment PROCESSING e remove ação', async () => {
+    authenticate()
+    let paymentGets = 0
+    server.use(
+      http.get(API_BASE_URL + '/orders/:id/payment', () => success(++paymentGets === 1 ? null : paymentProcessingFixture)),
+      http.post(API_BASE_URL + '/orders/:id/cancel', () => failure(409, 'ORDER_NOT_CANCELLABLE')),
+    )
+    mountDetail()
+    const section = await screen.findByRole('region', { name: 'Ações do pedido' })
+    await userEvent.click(await within(section).findByRole('button', { name: 'Cancelar pedido' }))
+    await userEvent.click(within(section).getByRole('button', { name: 'Cancelar pedido' }))
+    expect(await screen.findByText('Pagamento em processamento.')).toBeInTheDocument()
+    expect(within(section).queryByRole('button', { name: 'Cancelar pedido' })).not.toBeInTheDocument()
+    expect(paymentGets).toBeGreaterThanOrEqual(2)
+  })
+
+  it('Order PAID + Payment PAID em reload não oferece ações', async () => {
+    authenticate()
+    server.use(
+      http.get(API_BASE_URL + '/orders/:id', () => success({ ...orderDetailsFixture, status: 'PAID' })),
+      http.get(API_BASE_URL + '/orders/:id/payment', () => success(paymentPaidFixture)),
+    )
+    mountDetail()
+    expect(await screen.findByText('Pagamento aprovado.')).toBeInTheDocument()
+    const section = screen.getByRole('region', { name: 'Ações do pedido' })
+    expect(within(section).getByText(/Pedido pago/)).toBeInTheDocument()
+    expect(within(section).queryByRole('button')).not.toBeInTheDocument()
   })
 })

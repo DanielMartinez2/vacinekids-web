@@ -42,6 +42,7 @@ describe('order utils', () => {
     expect(priceChanged(120, '120.00')).toBe(false)
     expect(priceChanged(119.99, '120.00')).toBe(true)
     expect(orderStatusLabel('PENDING_PAYMENT')).toBe('Aguardando pagamento')
+    expect(orderStatusLabel('PAID')).toBe('Pago')
     expect(orderStatusLabel('CANCELLED')).toBe('Cancelado')
     expect(formatOrderBirthDate('2021-05-12')).toBe('12/05/2021')
   })

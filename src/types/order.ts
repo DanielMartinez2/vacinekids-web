@@ -2,7 +2,7 @@ import type { PaginationMeta } from './api'
 
 export type OrderProductType = 'VACCINE' | 'PACKAGE'
 export type OrderRecipientType = 'CUSTOMER' | 'DEPENDENT'
-export type OrderStatus = 'PENDING_PAYMENT' | 'CANCELLED'
+export type OrderStatus = 'PENDING_PAYMENT' | 'PAID' | 'CANCELLED'
 
 export type CheckoutRecipient =
   | { type: 'CUSTOMER' }

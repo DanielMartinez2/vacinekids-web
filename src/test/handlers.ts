@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw'
 import { API_BASE_URL } from '../api/httpClient'
-import { babyRange, checkoutPreviewFixture, childRange, childVaccineFixture, orderDetailsFixture, orderSummaryFixture, packageFixture, vaccineFixture } from './fixtures'
+import { babyRange, checkoutPreviewFixture, childRange, childVaccineFixture, orderDetailsFixture, orderSummaryFixture, packageFixture, paymentPaidFixture, vaccineFixture } from './fixtures'
 
 const meta = (total: number, page = 1, pageSize = 6) => ({ page, pageSize, total, totalPages: Math.ceil(total / pageSize) })
 
@@ -36,4 +36,6 @@ export const handlers = [
     ? HttpResponse.json({ data: orderDetailsFixture, error: null })
     : HttpResponse.json({ data: null, error: { code: 'ORDER_NOT_FOUND', message: 'Order not found' } }, { status: 404 })),
   http.post(`${API_BASE_URL}/orders/:id/cancel`, () => HttpResponse.json({ data: { ...orderDetailsFixture, status: 'CANCELLED', cancelledAt: '2026-09-09T13:00:00.000Z' }, error: null })),
+  http.get(`${API_BASE_URL}/orders/:id/payment`, () => HttpResponse.json({ data: null, error: null })),
+  http.post(`${API_BASE_URL}/orders/:id/payment-attempts`, () => HttpResponse.json({ data: paymentPaidFixture, error: null }, { status: 201 })),
 ]

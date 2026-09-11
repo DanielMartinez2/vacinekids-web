@@ -1,6 +1,7 @@
 import type { AgeRange, Vaccine, VaccinePackage } from '../types/catalog'
 import type { CustomerProfile, Dependent } from '../types/customer'
 import type { CheckoutPreview, OrderDetails, OrderSummary } from '../types/order'
+import type { Payment } from '../types/payment'
 
 export const customerProfileFixture: CustomerProfile = {
   id: '40000000-0000-4000-8000-000000000001',
@@ -85,4 +86,59 @@ export const orderSummaryFixture: OrderSummary = {
   totalAmount: orderDetailsFixture.totalAmount,
   createdAt: orderDetailsFixture.createdAt,
   itemCount: orderDetailsFixture.items.length,
+}
+
+const paymentAttemptBase = {
+  id: '70000000-0000-4000-8000-000000000001',
+  sequence: 1,
+  provider: 'DEMO' as const,
+  method: 'DEMO' as const,
+  expiresAt: null,
+}
+
+const paymentBase = {
+  id: '80000000-0000-4000-8000-000000000001',
+  orderId: orderDetailsFixture.id,
+  amount: orderDetailsFixture.totalAmount,
+  currency: 'BRL' as const,
+  paidAt: null,
+  cancelledAt: null,
+}
+
+export const paymentPendingRejectedFixture: Payment = {
+  ...paymentBase,
+  status: 'PENDING',
+  latestAttempt: { ...paymentAttemptBase, status: 'REJECTED', completedAt: '2026-09-09T12:32:00.000Z' },
+}
+
+export const paymentPendingErrorFixture: Payment = {
+  ...paymentBase,
+  status: 'PENDING',
+  latestAttempt: { ...paymentAttemptBase, status: 'ERROR', completedAt: '2026-09-09T12:32:00.000Z' },
+}
+
+export const paymentPendingExpiredFixture: Payment = {
+  ...paymentBase,
+  status: 'PENDING',
+  latestAttempt: { ...paymentAttemptBase, status: 'EXPIRED', expiresAt: '2026-09-09T12:32:00.000Z', completedAt: '2026-09-09T12:32:00.000Z' },
+}
+
+export const paymentProcessingFixture: Payment = {
+  ...paymentBase,
+  status: 'PROCESSING',
+  latestAttempt: { ...paymentAttemptBase, status: 'PROCESSING', completedAt: null },
+}
+
+export const paymentPaidFixture: Payment = {
+  ...paymentBase,
+  status: 'PAID',
+  paidAt: '2026-09-09T12:32:00.000Z',
+  latestAttempt: { ...paymentAttemptBase, status: 'APPROVED', completedAt: '2026-09-09T12:32:00.000Z' },
+}
+
+export const paymentCancelledFixture: Payment = {
+  ...paymentBase,
+  status: 'CANCELLED',
+  cancelledAt: '2026-09-09T12:32:00.000Z',
+  latestAttempt: { ...paymentAttemptBase, status: 'CANCELLED', completedAt: '2026-09-09T12:32:00.000Z' },
 }

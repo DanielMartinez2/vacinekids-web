@@ -49,7 +49,7 @@ export function CartPage() {
               <div><span>Subtotal</span><strong>{formatCurrency(subtotal)}</strong></div>
               <div className="summary-total"><span>Total</span><strong>{formatCurrency(subtotal)}</strong></div>
               <Link className="button button-primary checkout-link" to="/checkout">Finalizar pedido <ArrowRight size={18} aria-hidden="true" /></Link>
-              <p>Os valores serão conferidos pela API antes da confirmação. Pagamentos e agendamentos ainda não fazem parte desta fase.</p>
+              <p>Os valores serão conferidos pela API antes da confirmação. O pagamento demonstrativo ficará disponível no pedido, sem cobrança real.</p>
             </aside>
           </div>
         )}

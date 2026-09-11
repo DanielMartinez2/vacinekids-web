@@ -45,7 +45,7 @@ export function VaccineDetailsPage() {
           <aside className="purchase-card">
             <span>Valor unitário</span>
             <strong className="purchase-price">{formatCurrency(item.price)}</strong>
-            <p>Seleção demonstrativa. Nenhum pedido ou agendamento será realizado nesta etapa.</p>
+            <p>Seleção demonstrativa. O pedido só será criado após checkout e confirmação; nenhuma cobrança real ocorre nesta etapa.</p>
             <QuantitySelector value={quantity} onChange={setQuantity} />
             <button className="button button-primary purchase-button" type="button" onClick={addToCart}><ShoppingBag size={18} aria-hidden="true" /> Adicionar ao carrinho</button>
             <span className="cart-feedback" aria-live="polite">{feedback}</span>

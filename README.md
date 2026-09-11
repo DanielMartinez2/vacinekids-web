@@ -16,10 +16,11 @@ Implementado:
 - Fase 1B: cadastro, login, sessão server-side, logout e rota administrativa demonstrativa;
 - Fase 2B: Minha Conta com perfil do responsável e dependentes para CUSTOMER.
 - Fase 3C local: checkout autoritativo, seleção de destinatários, criação idempotente e histórico/cancelamento de pedidos com MSW.
+- Fase 4C local: painel de Payment com provider DEMO, tentativa idempotente, recuperação de estados e confirmação explícita sem cobrança real, simulado por MSW.
 
 Ainda não implementado:
 
-- pagamentos;
+- pagamentos reais (Mercado Pago, PIX ou cartão);
 - agendamento;
 - área administrativa funcional.
 
@@ -37,7 +38,7 @@ O Fetch foi escolhido por já estar disponível no navegador sem adicionar outra
 ## Arquitetura
 
 ```text
-PostgreSQL → Prisma → Express REST → vacinekids-web → Catálogo → Carrinho → Checkout → Pedidos
+PostgreSQL → Prisma → Express REST → vacinekids-web → Catálogo → Carrinho → Checkout → Pedidos → Payment DEMO
 ```
 
 As responsabilidades principais são separadas em:
@@ -129,9 +130,19 @@ O botão “Revisar pedido” chama explicitamente `POST /checkout/preview`. A r
 
 Ao confirmar, o frontend gera `Idempotency-Key` com `crypto.randomUUID()` e congela em memória a chave, o fingerprint e o body. Em timeout ou erro de rede, “Tentar novamente” reutiliza exatamente a mesma tentativa. Respostas `201` e replay `200` são sucesso equivalente: somente então o carrinho é limpo e a navegação segue para `/pedidos/:id`. `CHECKOUT_CHANGED` descarta a tentativa e exige novo preview; erros de produto, destinatário, perfil, rate limit ou indisponibilidade preservam o carrinho.
 
-`/pedidos` apresenta histórico paginado e `/pedidos/:id` usa apenas os snapshots retornados pelo Order, inclusive datas civis sem conversão de timezone. O cancelamento exige confirmação e envia `POST /orders/:id/cancel` com `{}`, sem Idempotency-Key. Apenas `PENDING_PAYMENT` oferece essa ação.
+`/pedidos` apresenta histórico paginado e `/pedidos/:id` usa apenas os snapshots retornados pelo Order, inclusive datas civis sem conversão de timezone. O cancelamento exige confirmação e envia `POST /orders/:id/cancel` com `{}`, sem Idempotency-Key. Apenas `PENDING_PAYMENT` sem pagamento ativo oferece essa ação.
 
-`CustomerRoute` aguarda a reconstrução de sessão, preserva o destino de visitantes e mostra 403 para ADMIN. O Header exibe “Meus pedidos” apenas para CUSTOMER. Checkout, preview, fingerprint, chave idempotente, recipients, Orders, snapshots, telefone e birthDate não são gravados em Web Storage. A Fase 3C permanece local e simulada por MSW; integração com o backend real e publicação pertencem às próximas fases. Payment, Mercado Pago, agendamento e estoque não estão implementados.
+`CustomerRoute` aguarda a reconstrução de sessão, preserva o destino de visitantes e mostra 403 para ADMIN. O Header exibe “Meus pedidos” apenas para CUSTOMER. Checkout, preview, fingerprint, chave idempotente, recipients, Orders, snapshots, telefone e birthDate não são gravados em Web Storage. A Fase 3C permanece local e simulada por MSW; integração com o backend real e publicação pertencem às próximas fases. Mercado Pago, agendamento e estoque não estão implementados.
+
+## Payment demonstrativo — Fase 4C local
+
+O detalhe de um pedido possui um painel localizado de Payment, sem nova rota e sem estado global. A interface deixa explícito que se trata de um pagamento demonstrativo e que nenhuma cobrança real será realizada. Não há captura de cartão, seletor de método, PIX, SDK, tokenização, webhook ou integração ativa com Mercado Pago.
+
+`GET /orders/:orderId/payment` recupera o estado persistido ao abrir a página e no botão manual “Atualizar status”; não há polling. A tela representa Payment ausente, `PENDING`, `PROCESSING`, `PAID` e `CANCELLED`, além de `latestAttempt` em `CREATED`, `PROCESSING`, `APPROVED`, `REJECTED`, `ERROR`, `EXPIRED` ou `CANCELLED`. Orders também aceitam `PAID`, exibido como “Pago”, sem consultas N+1 na listagem.
+
+Uma nova tentativa exige confirmação acessível e gera uma `Idempotency-Key` própria por `crypto.randomUUID()`. O `POST /orders/:orderId/payment-attempts` envia somente `{}`: valor, moeda, provider, método e resultado são sempre autoridade do backend. Em erro de rede, timeout ou resposta 504 de resultado incerto, a tentativa lógica fica congelada apenas em memória e o retry reutiliza exatamente a mesma chave e o mesmo body. Respostas conhecidas e estados terminais encerram essa tentativa; `PROCESSING` é acompanhado somente por GET manual.
+
+Payment, attempt, chave idempotente, valor, status e erros financeiros não são gravados em `localStorage`, `sessionStorage` ou IndexedDB. Após reload ou concorrência entre abas, o backend é a fonte de recuperação. O cancelamento continua disponível apenas para Order `PENDING_PAYMENT` quando o Payment conhecido é nulo ou pendente com tentativa terminal; ele some durante processamento e após pagamento. Esta implementação está somente no frontend local/MSW e não foi publicada.
 
 ## Integração com a API
 
@@ -146,7 +157,9 @@ O frontend consome:
 - `POST /api/v1/checkout/preview`;
 - `POST` e `GET /api/v1/orders`;
 - `GET /api/v1/orders/:id`;
-- `POST /api/v1/orders/:id/cancel`.
+- `POST /api/v1/orders/:id/cancel`;
+- `GET /api/v1/orders/:id/payment`;
+- `POST /api/v1/orders/:id/payment-attempts`.
 
 A busca e o filtro `ageRange` por slug são enviados para a API tanto em vacinas quanto em pacotes. A compatibilidade de um pacote com a faixa etária é definida exclusivamente pelo backend, e sua paginação usa `page`, `pageSize` e a metadata retornada pela API.
 
@@ -167,6 +180,8 @@ A suíte ampliada também cobre authService/HTTP, AuthProvider, corrida com `/me
 Em 2026-09-08: 135 testes aprovados, lint/typecheck/build aprovados e `npm audit` com zero vulnerabilidades. Não houve atualização de dependências.
 
 Em 2026-09-09, após a Fase 3C local: 200 testes aprovados (135 anteriores + 65 novos), lint/typecheck/build aprovados e `npm audit` com zero vulnerabilidades. Nenhuma dependência foi atualizada.
+
+Na Fase 4C, a suíte local foi ampliada com validação do contrato Payment, idempotência/replay, resultado incerto, conflitos, estados financeiros, sincronização de Order, acessibilidade e regressões. Os resultados finais desta fase devem ser obtidos pelos comandos acima antes da integração real da Fase 4D.
 
 ### Smoke test opcional em Chrome real
 
